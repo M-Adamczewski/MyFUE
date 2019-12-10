@@ -1,0 +1,151 @@
+package com.example.myfue;
+import androidx.appcompat.app.AppCompatActivity;
+import android.graphics.Bitmap;
+import android.os.Bundle;
+import android.view.SurfaceView;
+import android.widget.Toast;
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase;
+import org.opencv.android.JavaCamera2View;
+import org.opencv.android.JavaCameraView;
+import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
+
+public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
+
+    CameraBridgeViewBase cameraBridgeViewBase;
+    Mat mat1, mat2, mat3;
+    BaseLoaderCallback baseLoaderCallback;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        cameraBridgeViewBase = (JavaCameraView)findViewById(R.id.myCameraView);
+        cameraBridgeViewBase.setVisibility(SurfaceView.VISIBLE);
+        cameraBridgeViewBase.setCvCameraViewListener(this);
+        ///////////////////////////////////////////
+        cameraBridgeViewBase.enableView();
+        cameraBridgeViewBase.setMaxFrameSize(720,1280);
+        ///////////////////////////////////////////
+
+
+        baseLoaderCallback = new BaseLoaderCallback(this) {
+            @Override
+            public void OnManagerConnected(int status) {
+                super.onManagerConnected(status);
+                switch(status){
+                         case BaseLoaderCallback.SUCCESS:
+                             cameraBridgeViewBase.enableView();
+                             break;
+                        default:
+                            super.onManagerConnected(status);
+                            break;
+                }
+            }
+        };
+    }
+///////////////////////////////////TUTAJ//////////////////////////////////////
+    @Override
+    public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
+
+        mat1 = inputFrame.rgba();
+        Core.transpose(mat1, mat2);
+        Imgproc.resize(mat2, mat3, mat1.size(), 0,0,0);
+        Core.flip(mat3, mat1, 1);
+
+        //mat2 = inputFrame.gray();
+        Mat dst = new Mat(), cdst = new Mat(), cdstP;
+        // Edge detection
+        Imgproc.Canny(mat1, dst, 50, 200, 3, false);
+
+        // Copy edges to the images that will display the results in BGR
+        Imgproc.cvtColor(dst, cdst, Imgproc.COLOR_GRAY2BGR);
+        cdstP = cdst.clone();
+
+        /*
+           /////////PIERWSZA METODA
+        // Standard Hough Line Transform
+        Mat lines = new Mat(); // will hold the results of the detection
+        Imgproc.HoughLines(dst, lines, 1, Math.PI/180, 150); // runs the actual detection
+
+
+        // Draw the lines
+        for (int x = 0; x < lines.rows(); x++) {
+            double rho = lines.get(x, 0)[0],
+                    theta = lines.get(x, 0)[1];
+            double a = Math.cos(theta), b = Math.sin(theta);
+            double x0 = a*rho, y0 = b*rho;
+            Point pt1 = new Point(Math.round(x0 + 1000*(-b)), Math.round(y0 + 1000*(a)));
+            Point pt2 = new Point(Math.round(x0 - 1000*(-b)), Math.round(y0 - 1000*(a)));
+            Imgproc.line(cdst, pt1, pt2, new Scalar(0, 0, 255), 3, Imgproc.LINE_AA, 0);
+            mat1=cdst;
+        }
+        */
+
+//DRUGA METODA
+        // Probabilistic Line Transform
+        Mat linesP = new Mat(); // will hold the results of the detection
+        Imgproc.HoughLinesP(dst, linesP, 1, Math.PI/180, 50, 50, 10); // runs the actual detection
+        // Draw the lines
+        for (int x = 0; x < linesP.rows(); x++) {
+            double[] l = linesP.get(x, 0);
+            Imgproc.line(cdstP, new Point(l[0], l[1]), new Point(l[2], l[3]), new Scalar(0, 255, 0), 3, Imgproc.LINE_AA, 0);
+         mat1=cdstP;
+        }
+
+
+        return mat1;
+    }
+
+    @Override
+    public void onCameraViewStopped() {
+
+        mat1.release();
+       // mat2.release();
+       // mat3.release();
+    }
+
+    @Override
+    public void onCameraViewStarted(int width, int height) {
+
+        mat1= new Mat(width, height, CvType.CV_8UC4);
+        mat2= new Mat(width, height, CvType.CV_8UC4);
+        mat3= new Mat(width, height, CvType.CV_8UC4);
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if(cameraBridgeViewBase!=null){
+            cameraBridgeViewBase.disableView();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if(!OpenCVLoader.initDebug()){
+    Toast.makeText(getApplicationContext(),"there is a problem in opencv",Toast.LENGTH_SHORT).show();
+        }
+        else{
+            baseLoaderCallback.onManagerConnected(BaseLoaderCallback.SUCCESS);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if(cameraBridgeViewBase!=null){
+            cameraBridgeViewBase.disableView();
+        }
+    }
+}
