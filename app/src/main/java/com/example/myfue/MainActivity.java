@@ -13,9 +13,12 @@ import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
+
+import java.util.Iterator;
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
@@ -42,41 +45,70 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             public void OnManagerConnected(int status) {
                 super.onManagerConnected(status);
                 switch(status){
-                         case BaseLoaderCallback.SUCCESS:
-                             cameraBridgeViewBase.enableView();
-                             break;
-                        default:
-                            super.onManagerConnected(status);
-                            break;
+                    case BaseLoaderCallback.SUCCESS:
+                        cameraBridgeViewBase.enableView();
+                        break;
+                    default:
+                        super.onManagerConnected(status);
+                        break;
                 }
             }
         };
     }
-///////////////////////////////////TUTAJ//////////////////////////////////////
+    ///////////////////////////////////TUTAJ//////////////////////////////////////
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
-        mat1 = inputFrame.rgba();
+        mat1 = inputFrame.gray();
         Core.transpose(mat1, mat2);
-        Imgproc.resize(mat2, mat3, mat1.size(), 0,0,0);
-        Core.flip(mat3, mat1, 1);
+        //Imgproc.resize(mat1, mat1, mat1.size(), 0,0,0);
+        Core.flip(mat2, mat1, 1);
 
-        //mat2 = inputFrame.gray();
-        Mat dst = new Mat(), cdst = new Mat(), cdstP;
+        java.util.List<MatOfPoint> lista = new java.util.ArrayList<MatOfPoint>();
+        Mat hierarchia= new Mat();
+
+        Mat image32S = new Mat();
+        mat1.convertTo(image32S, CvType.CV_32SC1);
+
+        Imgproc.findContours(image32S, lista, hierarchia, Imgproc.RETR_CCOMP,Imgproc.CHAIN_APPROX_NONE);
+        int licznik;
+        double maxwart=0;
+        int maxwartIndex=0;
+
+        /////////////////////////////////SORTOWANIE LISTY//////////////////////////////////////////////////////////////////////////
+        for(int g=0; g<lista.size();g++){
+            double contourArea=Imgproc.contourArea(lista.get(g));
+            if (maxwart<contourArea){
+                maxwart=contourArea;
+                maxwartIndex=g;
+            }
+        }
+        Imgproc.drawContours(mat1, lista, maxwartIndex, new Scalar(255,255,255),5);
+
+
+        //mat2.release();
+        hierarchia.release();
+        image32S.release();
+
+        //
+          //  Imgproc.drawContours(mat2, lista, 0, new Scalar(0,255,0,255), 3);
+ //       for (int i = 0; i < 4; i++) {
+ //           Imgproc.drawContours(mat1, lista, i, new Scalar(255, 255, 255), 3);
+ //       }
+
+
         // Edge detection
-        Imgproc.Canny(mat1, dst, 50, 200, 3, false);
-
+       // Imgproc.Canny(mat1, dst, 50, 200, 3, false);
+        //Mat dst = new Mat(), cdst = new Mat(), cdstP;
         // Copy edges to the images that will display the results in BGR
-        Imgproc.cvtColor(dst, cdst, Imgproc.COLOR_GRAY2BGR);
-        cdstP = cdst.clone();
+        //Imgproc.cvtColor(dst, cdst, Imgproc.COLOR_GRAY2BGR);
+        //cdstP = cdst.clone();
 
         /*
            /////////PIERWSZA METODA
         // Standard Hough Line Transform
         Mat lines = new Mat(); // will hold the results of the detection
         Imgproc.HoughLines(dst, lines, 1, Math.PI/180, 150); // runs the actual detection
-
-
         // Draw the lines
         for (int x = 0; x < lines.rows(); x++) {
             double rho = lines.get(x, 0)[0],
@@ -88,7 +120,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             Imgproc.line(cdst, pt1, pt2, new Scalar(0, 0, 255), 3, Imgproc.LINE_AA, 0);
             mat1=cdst;
         }
-        */
+
 
 //DRUGA METODA
         // Probabilistic Line Transform
@@ -98,9 +130,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         for (int x = 0; x < linesP.rows(); x++) {
             double[] l = linesP.get(x, 0);
             Imgproc.line(cdstP, new Point(l[0], l[1]), new Point(l[2], l[3]), new Scalar(0, 255, 0), 3, Imgproc.LINE_AA, 0);
-         mat1=cdstP;
+            mat1=cdstP;
         }
-
+*/
 
         return mat1;
     }
@@ -109,8 +141,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public void onCameraViewStopped() {
 
         mat1.release();
-       // mat2.release();
-       // mat3.release();
+        // mat2.release();
+        // mat3.release();
     }
 
     @Override
@@ -134,7 +166,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     protected void onResume() {
         super.onResume();
         if(!OpenCVLoader.initDebug()){
-    Toast.makeText(getApplicationContext(),"there is a problem in opencv",Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(),"there is a problem in opencv",Toast.LENGTH_SHORT).show();
         }
         else{
             baseLoaderCallback.onManagerConnected(BaseLoaderCallback.SUCCESS);

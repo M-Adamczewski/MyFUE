@@ -14,4 +14,7 @@
         android:id="@+id/myCameraView"
         app:show_fps="false"
         />
+
+
 </RelativeLayout>
+

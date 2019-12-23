@@ -28,3 +28,8 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.0-alpha4'
     implementation project(':openCVLibrary341')
 }
+android {
+    defaultConfig {
+        applicationId "com.example.myapp"
+    }
+}
