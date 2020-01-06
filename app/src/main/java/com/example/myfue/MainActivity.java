@@ -1,31 +1,34 @@
 package com.example.myfue;
 import androidx.appcompat.app.AppCompatActivity;
-import android.graphics.Bitmap;
+
 import android.os.Bundle;
 import android.view.SurfaceView;
 import android.widget.Toast;
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
-import org.opencv.android.JavaCamera2View;
+
 import org.opencv.android.JavaCameraView;
 import org.opencv.android.OpenCVLoader;
-import org.opencv.android.Utils;
+
 import org.opencv.core.Core;
+
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
-import org.opencv.core.Point;
+
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
-import java.util.Iterator;
+import static org.opencv.core.CvType.CV_8UC3;
+
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
     CameraBridgeViewBase cameraBridgeViewBase;
-    Mat mat1, mat2, mat3;
+    Mat mat1, mat2, mat3, mat4;
     BaseLoaderCallback baseLoaderCallback;
-
+   // Mat Matu = new Mat(2,3, CV_8UC3, new Scalar(2,2,255));
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -59,19 +62,25 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
-        mat1 = inputFrame.gray();
+        mat1 = inputFrame.rgba();
         Core.transpose(mat1, mat2);
         //Imgproc.resize(mat1, mat1, mat1.size(), 0,0,0);
         Core.flip(mat2, mat1, 1);
+
+
 
         java.util.List<MatOfPoint> lista = new java.util.ArrayList<MatOfPoint>();
         Mat hierarchia= new Mat();
 
         Mat image32S = new Mat();
-        mat1.convertTo(image32S, CvType.CV_32SC1);
+        //mat1.convertTo(image32S, CvType.CV_32SC1);
+        Imgproc.cvtColor(mat1, mat3,  Imgproc.COLOR_BGR2GRAY );
+      //  Imgproc.blur(mat3, mat4, new Size(3, 3));
+        Imgproc.Canny( mat3, image32S, 50, 150, 3, false); //szuka krawedzi
 
-        Imgproc.findContours(image32S, lista, hierarchia, Imgproc.RETR_CCOMP,Imgproc.CHAIN_APPROX_NONE);
-        int licznik;
+
+        Imgproc.findContours(image32S, lista, hierarchia, Imgproc.RETR_EXTERNAL,Imgproc.CHAIN_APPROX_SIMPLE);
+
         double maxwart=0;
         int maxwartIndex=0;
 
@@ -83,13 +92,15 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 maxwartIndex=g;
             }
         }
-        Imgproc.drawContours(mat1, lista, maxwartIndex, new Scalar(255,255,255),5);
+        Imgproc.drawContours(mat1, lista, maxwartIndex, new Scalar(255,0,0),5);
 
 
         //mat2.release();
         hierarchia.release();
         image32S.release();
 
+
+        return mat1;
         //
           //  Imgproc.drawContours(mat2, lista, 0, new Scalar(0,255,0,255), 3);
  //       for (int i = 0; i < 4; i++) {
@@ -134,7 +145,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
 */
 
-        return mat1;
+
     }
 
     @Override
