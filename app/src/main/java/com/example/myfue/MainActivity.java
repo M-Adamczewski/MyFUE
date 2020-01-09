@@ -26,9 +26,9 @@ import static org.opencv.core.CvType.CV_8UC3;
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
     CameraBridgeViewBase cameraBridgeViewBase;
-    Mat mat1, mat2, mat3, mat4;
+    //Mat matryca_wejsciowa, matryca_docelowa, mat2, mat3;
     BaseLoaderCallback baseLoaderCallback;
-   // Mat Matu = new Mat(2,3, CV_8UC3, new Scalar(2,2,255));
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,11 +37,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         cameraBridgeViewBase = (JavaCameraView)findViewById(R.id.myCameraView);
         cameraBridgeViewBase.setVisibility(SurfaceView.VISIBLE);
         cameraBridgeViewBase.setCvCameraViewListener(this);
-        ///////////////////////////////////////////
         cameraBridgeViewBase.enableView();
         cameraBridgeViewBase.setMaxFrameSize(720,1280);
-        ///////////////////////////////////////////
-
 
         baseLoaderCallback = new BaseLoaderCallback(this) {
             @Override
@@ -58,58 +55,66 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             }
         };
     }
-    ///////////////////////////////////TUTAJ//////////////////////////////////////
+
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
+        //deklaracja zmiennych
+        Mat hierarchia = new Mat();
+        Mat matryca_krawedzi = new Mat();
+        Mat matryca_docelowa = new Mat();
+        Mat matryca_wejsciowa = new Mat();
+        java.util.List<MatOfPoint> lista_konturow = new java.util.ArrayList<MatOfPoint>();
+        double maxwart = 0;
+        int maxwartIndex = 0;
 
-        mat1 = inputFrame.rgba();
-        Core.transpose(mat1, mat2);
-        //Imgproc.resize(mat1, mat1, mat1.size(), 0,0,0);
-        Core.flip(mat2, mat1, 1);
+        //pobranie obrazu
+        matryca_wejsciowa = inputFrame.gray();
+        matryca_docelowa = inputFrame.rgba();
+        //transpozycja macierzy obrazu
+        Core.transpose(matryca_wejsciowa, matryca_wejsciowa);
+        Core.transpose(matryca_docelowa, matryca_docelowa);
+        //zmiana wymiarów matrycy
+        Imgproc.resize(matryca_wejsciowa, matryca_wejsciowa, new Size(720, 720));
+        Imgproc.resize(matryca_docelowa, matryca_docelowa, new Size(720, 720));
+        //lustrzane odbicie w osi Y
+        Core.flip(matryca_wejsciowa, matryca_wejsciowa, 1);
+        Core.flip(matryca_docelowa, matryca_docelowa, 1);
+        //rozmycie krawędzi
+ //       Imgproc.blur(mat3, mat4, new Size(3, 3));
+        //wykrycie krawędzi
+        Imgproc.Canny(matryca_wejsciowa, matryca_krawedzi, 50, 150, 3, false);
+        //wykrycie konturów
+        Imgproc.findContours(matryca_krawedzi, lista_konturow, hierarchia, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 
-
-
-        java.util.List<MatOfPoint> lista = new java.util.ArrayList<MatOfPoint>();
-        Mat hierarchia= new Mat();
-
-        Mat image32S = new Mat();
-        //mat1.convertTo(image32S, CvType.CV_32SC1);
-        Imgproc.cvtColor(mat1, mat3,  Imgproc.COLOR_BGR2GRAY );
-      //  Imgproc.blur(mat3, mat4, new Size(3, 3));
-        Imgproc.Canny( mat3, image32S, 50, 150, 3, false); //szuka krawedzi
-
-
-        Imgproc.findContours(image32S, lista, hierarchia, Imgproc.RETR_EXTERNAL,Imgproc.CHAIN_APPROX_SIMPLE);
-
-        double maxwart=0;
-        int maxwartIndex=0;
-
-        /////////////////////////////////SORTOWANIE LISTY//////////////////////////////////////////////////////////////////////////
-        for(int g=0; g<lista.size();g++){
-            double contourArea=Imgproc.contourArea(lista.get(g));
-            if (maxwart<contourArea){
-                maxwart=contourArea;
-                maxwartIndex=g;
+        //wyłonienie największego konturu z listy
+        for (int g = 0; g < lista_konturow.size(); g++) {
+            double contourArea = Imgproc.contourArea(lista_konturow.get(g));
+            if (maxwart < contourArea) {
+                maxwart = contourArea;
+                maxwartIndex = g;
             }
         }
-        Imgproc.drawContours(mat1, lista, maxwartIndex, new Scalar(255,0,0),5);
 
+        //zaznaczenie wykrytych konturów na obrazie
+        Imgproc.drawContours(matryca_docelowa, lista_konturow, maxwartIndex, new Scalar(255, 0, 0), 5);
 
-        //mat2.release();
+        //zwolnienie pamięci
         hierarchia.release();
-        image32S.release();
+        matryca_krawedzi.release();
+        matryca_wejsciowa.release();
 
-
-        return mat1;
+        
+        return matryca_docelowa;
+    }
         //
-          //  Imgproc.drawContours(mat2, lista, 0, new Scalar(0,255,0,255), 3);
+          //  Imgproc.drawContours(mat2, lista_konturow, 0, new Scalar(0,255,0,255), 3);
  //       for (int i = 0; i < 4; i++) {
- //           Imgproc.drawContours(mat1, lista, i, new Scalar(255, 255, 255), 3);
+ //           Imgproc.drawContours(matryca_wejsciowa, lista_konturow, i, new Scalar(255, 255, 255), 3);
  //       }
 
 
         // Edge detection
-       // Imgproc.Canny(mat1, dst, 50, 200, 3, false);
+       // Imgproc.Canny(matryca_wejsciowa, dst, 50, 200, 3, false);
         //Mat dst = new Mat(), cdst = new Mat(), cdstP;
         // Copy edges to the images that will display the results in BGR
         //Imgproc.cvtColor(dst, cdst, Imgproc.COLOR_GRAY2BGR);
@@ -129,7 +134,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             Point pt1 = new Point(Math.round(x0 + 1000*(-b)), Math.round(y0 + 1000*(a)));
             Point pt2 = new Point(Math.round(x0 - 1000*(-b)), Math.round(y0 - 1000*(a)));
             Imgproc.line(cdst, pt1, pt2, new Scalar(0, 0, 255), 3, Imgproc.LINE_AA, 0);
-            mat1=cdst;
+            matryca_wejsciowa=cdst;
         }
 
 
@@ -141,17 +146,17 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         for (int x = 0; x < linesP.rows(); x++) {
             double[] l = linesP.get(x, 0);
             Imgproc.line(cdstP, new Point(l[0], l[1]), new Point(l[2], l[3]), new Scalar(0, 255, 0), 3, Imgproc.LINE_AA, 0);
-            mat1=cdstP;
+            matryca_wejsciowa=cdstP;
         }
 */
 
 
-    }
+    //}
 
     @Override
     public void onCameraViewStopped() {
 
-        mat1.release();
+        //matryca_wejsciowa.release();
         // mat2.release();
         // mat3.release();
     }
@@ -159,9 +164,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     @Override
     public void onCameraViewStarted(int width, int height) {
 
-        mat1= new Mat(width, height, CvType.CV_8UC4);
-        mat2= new Mat(width, height, CvType.CV_8UC4);
-        mat3= new Mat(width, height, CvType.CV_8UC4);
+        //matryca_wejsciowa= new Mat(width, height, CvType.CV_8UC4);
+        //mat2= new Mat(width, height, CvType.CV_8UC4);
+        //mat3= new Mat(width, height, CvType.CV_8UC4);
 
     }
 
